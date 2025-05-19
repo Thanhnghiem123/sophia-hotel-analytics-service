@@ -1,0 +1,25 @@
+name: sophia_hotel
+
+services:
+  analytics-service:
+    container_name: analytics-service
+    build:
+      context: ../
+      target: runtime
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - DATABASE_URL=jdbc:postgresql://dpg-d0leuo3e5dus73ch7oag-a.singapore-postgres.render.com/analytics_postgres_lsxy
+      - DATABASE_USERNAME=analytics_postgres_user
+      - DATABASE_PASSWORD=ERk9CxsgnuacvYN2OxCsN9f4rsolMDyp
+    networks:
+      - sophia_hotel
+
+volumes:
+  mongo_data:
+
+networks:
+  sophia_hotel:
+    driver: bridge

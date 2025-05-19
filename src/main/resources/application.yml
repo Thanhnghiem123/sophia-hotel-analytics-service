@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: analytics-service
+  datasource:
+     driver-class-name: org.postgresql.Driver
+     url: ${DATABASE_URL}
+     username: ${DATABASE_USERNAME}
+     password: ${DATABASE_PASSWORD}
+
+#   url: jdbc:postgresql://localhost:5432/postgres
+#  dpg-d0leuo3e5dus73ch7oag-a.singapore-postgres.render.com/analytics_postgres_lsxy
+
+  #   username: postgres
+#  analytics_postgres_user
+
+#   password: postgres
+#  ERk9CxsgnuacvYN2OxCsN9f4rsolMDyp
+
+#  analytics_postgres_lsxy
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  mvc:
+    servlet:
+      path: /api/v1
+  main:
+    allow-bean-definition-overriding: true
+
+server:
+  port: 8085
+
+eureka:
+  client:
+      serviceUrl:
+        defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+#   serviceUrl:
+#     defaultZone: https://sophia-hotel-discovery-service-xq0g.onrender.com/eureka/
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+        web: DEBUG
+
+# Swagger OpenAPI
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# JWT Configuration
+jwt:
+  secret: sophiaHotelAnalyticsServiceSecretKey123456789012345678901234567890
+  expiration: 86400000 # 24 hours in milliseconds
