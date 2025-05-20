@@ -58,3 +58,9 @@ springdoc:
 jwt:
   secret: sophiaHotelAnalyticsServiceSecretKey123456789012345678901234567890
   expiration: 86400000 # 24 hours in milliseconds
+
+# Service URLs
+service:
+  hotel: http://localhost:8081
+  booking: http://localhost:8082
+  payment: http://localhost:8084
