@@ -2,66 +2,98 @@ package vn.edu.iuh.sophiahotelanalyticsservice.filters;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Value;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import jakarta.servlet.Filter;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Component
-public class JWTAuthenticationFilter implements Filter {
+public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    private final String SECRET_KEY = "6d7f6e6f4f3a9f97f2616c740213adf6a3acfb9f5b7178ab8f12f5d531e98d3a";  // Your secret key
+    private final Logger logger = LoggerFactory.getLogger(JWTAuthenticationFilter.class);
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        final String authorizationHeader = httpRequest.getHeader("Authorization");
-
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String jwt = authorizationHeader.substring(7);
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String token = getTokenFromRequest(request);
+        logger.debug("Token: {}", token);
+        if (token != null) {
             try {
                 Claims claims = Jwts.parser()
-                        .setSigningKey(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)))
+                        .setSigningKey(SECRET_KEY)
                         .build()
-                        .parseClaimsJws(jwt)
-                        .getBody();
+                        .parseSignedClaims(token)
+                        .getPayload();
+                logger.debug("Claims: {}", claims);
 
-                String username = claims.getSubject();
-                List<Map<String, String>> roles = (List<Map<String, String>>) claims.get("roles"); // Sửa: Lấy roles dưới dạng List<Map>
+                // Create authorities list from claims
+                List<SimpleGrantedAuthority> authorities = extractAuthoritiesFromClaims(claims);
 
-                List<SimpleGrantedAuthority> authorities = roles.stream()
-                        .map(role -> new SimpleGrantedAuthority(role.get("authority"))) // Sửa: Lấy giá trị authority từ Map
-                        .collect(Collectors.toList());
+                logger.debug("Authorities: {}", authorities);
 
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        username, null, authorities);
+                // Create an Authentication object
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        claims.getSubject(), null, authorities
+                );
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                // Create an empty SecurityContext and set the authentication object
+                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                securityContext.setAuthentication(authentication);
+                SecurityContextHolder.setContext(securityContext);
 
             } catch (Exception e) {
-                // Token is invalid
-                SecurityContextHolder.clearContext();
-                System.out.println("JWT token is invalid: " + e.getMessage());
+                // Handle token parsing exceptions or invalid token
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                return;
             }
         }
 
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
+
+    private String getTokenFromRequest(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7);
+        }
+        return null;
+    }
+
+    private List<SimpleGrantedAuthority> extractAuthoritiesFromClaims(Claims claims) {
+        Object rolesObject = claims.get("roles");
+
+        if (rolesObject instanceof List) {
+            List<String> roles = ((List<?>) rolesObject).stream()
+                    .filter(Map.class::isInstance)
+                    .map(item -> ((Map<?, ?>) item).get("authority"))
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .toList();
+
+            logger.debug("Roles: {}", roles);
+
+            return roles.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .toList();
+        } else {
+            logger.error("Roles are not in the expected format");
+            return Collections.emptyList();
+        }
+    }
+
 }

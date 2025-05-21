@@ -56,7 +56,8 @@ springdoc:
 
 # JWT Configuration
 jwt:
-  secret: sophiaHotelAnalyticsServiceSecretKey123456789012345678901234567890
+  # IMPORTANT: This must match the JWT secret used in the auth service
+  secret: ${JWT_SECRET:defaultJwtSecretKeyThatShouldBeChangedInProduction}
   expiration: 86400000 # 24 hours in milliseconds
 
 # Service URLs
@@ -64,3 +65,4 @@ service:
   hotel: http://localhost:8082
   booking: http://localhost:8083
   payment: http://localhost:8084
+  user: http://localhost:8081

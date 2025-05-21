@@ -1,5 +1,6 @@
 package vn.edu.iuh.sophiahotelanalyticsservice.configs;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,22 +20,22 @@ import vn.edu.iuh.sophiahotelanalyticsservice.filters.JWTAuthenticationFilter;
 @EnableWebSecurity
 public class SecurityConfig {
 
-   private final CorsConfigurationSource corsConfigurationSource;
-   private final JWTAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsConfigurationSource corsConfigurationSource;
 
-   public SecurityConfig(CorsConfigurationSource corsConfigurationSource, JWTAuthenticationFilter jwtAuthenticationFilter) {
-      this.corsConfigurationSource = corsConfigurationSource;
-      this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-   }
+    public SecurityConfig(CorsConfigurationSource corsConfigurationSource) {
+        this.corsConfigurationSource = corsConfigurationSource;
+    }
 
-   @Bean
-   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-      http.csrf(AbstractHttpConfigurer::disable)
-              .cors(cors -> cors.configurationSource(corsConfigurationSource))
-              .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                      .anyRequest().permitAll() // Cho phép tất cả request, không cần xác thực
-              )
-              .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-      return http.build();
-   }
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(new JWTAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        return http.build();
+    }
 }

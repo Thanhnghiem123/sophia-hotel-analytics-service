@@ -59,6 +59,7 @@ public class HotelServiceClient {
         }
     }
     
+    
     public HotelResponse getHotelById(String hotelId) {
         String url = hotelServiceUrl + "/api/v1/hotels/" + hotelId;
         log.info("Fetching hotel by id: {}", hotelId);
@@ -109,4 +110,27 @@ public class HotelServiceClient {
             return 0; // Return 0 as default if there's an error
         }
     }
+
+    public int getAvailableRoomCount() {
+        String url = hotelServiceUrl + "/api/v1/rooms/available/count";
+        log.info("Fetching available room count");
+
+        try {
+            ResponseEntity<Integer> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    Integer.class
+            );
+
+            int availableRooms = response.getBody() != null ? response.getBody() : 0;
+            log.debug("Available room count: {}", availableRooms);
+
+            return availableRooms;
+        } catch (Exception e) {
+            log.error("Error fetching available room count: {}", e.getMessage());
+            return 0; // Return 0 as default if there's an error
+        }
+    }
+
 }

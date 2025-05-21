@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.BookingServiceClient;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.HotelServiceClient;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.PaymentServiceClient;
+import vn.edu.iuh.sophiahotelanalyticsservice.clients.UserServiceClient;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.dto.BookingResponse;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.dto.HotelResponse;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.dto.PaymentResponse;
@@ -33,6 +34,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final HotelServiceClient hotelServiceClient;
     private final BookingServiceClient bookingServiceClient;
     private final PaymentServiceClient paymentServiceClient;
+    private final UserServiceClient userServiceClient;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -67,25 +69,46 @@ public class StatisticsServiceImpl implements StatisticsService {
 
             System.out.println("Total rooms: " + totalRooms);
 
-//            BigDecimal totalRevenue = BigDecimal.ZERO;
-//            List<PaymentResponse> allPayments = paymentServiceClient.getPaymentsByDateRange(
-//                    today.minusMonths(6), // Last 6 months
-//                    today
-//            );
-//
-//            if (!allPayments.isEmpty()) {
-//                totalRevenue = allPayments.stream()
-//                        .map(PaymentResponse::getAmount)
-//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-//            }
+            // Get total transactions (bookings)
+            long totalBookings = 0;
+            try {
+                totalBookings = bookingServiceClient.getTotalTransactions();
+                log.info("Fetched total transactions: {}", totalBookings);
+            } catch (Exception e) {
+                log.error("Error fetching total transactions: {}", e.getMessage());
+            }
+
+            BigDecimal totalRevenue = BigDecimal.ZERO;
+            try {
+                LocalDate today = LocalDate.now();
+                List<PaymentResponse> allPayments = paymentServiceClient.getPaymentsByDateRange(
+                        today.minusMonths(6), // Last 6 months
+                        today
+                );
+
+                if (allPayments != null && !allPayments.isEmpty()) {
+                    totalRevenue = allPayments.stream()
+                            .map(PaymentResponse::getAmount)
+                            .filter(Objects::nonNull)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                }
+            } catch (Exception e) {
+                log.error("Error calculating total revenue: {}", e.getMessage());
+            }
+
+//            getAvailableRoomCount
+            int availableRooms = hotelServiceClient.getAvailableRoomCount();
+
+//                    getUserCount
+            int userCount = userServiceClient.getUserCount();
 
             return OverviewStatisticsResponse.builder()
                     .totalHotels(totalHotels)
                     .totalRooms(totalRooms)
-                    .totalBookings(0)
-                    .totalRevenue(BigDecimal.ZERO)
-                    .currentGuests(0)
-                    .availableRooms(0)
+                    .totalBookings(totalBookings)
+                    .totalRevenue(totalRevenue)
+                    .currentGuests(userCount) // TODO: Implement this if needed
+                    .availableRooms(availableRooms)  // TODO: Implement this if needed
                     .build();
 
         } catch (Exception e) {
