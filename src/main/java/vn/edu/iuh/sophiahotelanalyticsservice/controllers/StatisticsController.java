@@ -1,7 +1,9 @@
 package vn.edu.iuh.sophiahotelanalyticsservice.controllers;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.sophiahotelanalyticsservice.dtos.requests.DateRangeRequest;
@@ -15,8 +17,9 @@ import vn.edu.iuh.sophiahotelanalyticsservice.services.StatisticsService;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/statistics")
+@RequestMapping("/api/v1/statistics")
 @RequiredArgsConstructor
 public class StatisticsController {
 

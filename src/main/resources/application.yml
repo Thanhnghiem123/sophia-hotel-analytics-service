@@ -2,21 +2,21 @@ spring:
   application:
     name: analytics-service
   datasource:
-     driver-class-name: org.postgresql.Driver
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
 
-#   url: jdbc:postgresql://localhost:5432/postgres
-#  dpg-d0leuo3e5dus73ch7oag-a.singapore-postgres.render.com/analytics_postgres_lsxy
+  #   url: jdbc:postgresql://localhost:5432/postgres
+  #  dpg-d0leuo3e5dus73ch7oag-a.singapore-postgres.render.com/analytics_postgres_lsxy
 
   #   username: postgres
-#  analytics_postgres_user
+  #  analytics_postgres_user
 
-#   password: postgres
-#  ERk9CxsgnuacvYN2OxCsN9f4rsolMDyp
+  #   password: postgres
+  #  ERk9CxsgnuacvYN2OxCsN9f4rsolMDyp
 
-#  analytics_postgres_lsxy
+  #  analytics_postgres_lsxy
 
   jpa:
     hibernate:
@@ -37,8 +37,8 @@ server:
 
 eureka:
   client:
-      serviceUrl:
-        defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
 #   serviceUrl:
 #     defaultZone: https://sophia-hotel-discovery-service-xq0g.onrender.com/eureka/
 
@@ -61,6 +61,6 @@ jwt:
 
 # Service URLs
 service:
-  hotel: http://localhost:8081
-  booking: http://localhost:8082
+  hotel: http://localhost:8082
+  booking: http://localhost:8083
   payment: http://localhost:8084

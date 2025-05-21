@@ -37,43 +37,57 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public OverviewStatisticsResponse getOverviewStatistics() {
+        log.info("Fetching overview statistics...");
         try {
-            // Fetch all hotels
-            List<HotelResponse> hotels = hotelServiceClient.getAllHotels();
-            int totalHotels = hotels.size();
-            
-            // Calculate total rooms (this is a simplified example)
-            // In a real implementation, you would fetch rooms for each hotel
+            // Lấy danh sách khách sạn
+            List<HotelResponse> hotels = Collections.emptyList();
+            int totalHotels = 0;
             int totalRooms = 0;
-            int availableRooms = 0;
-            int currentGuests = 0;
-            
-            // Fetch all active bookings
-            LocalDate today = LocalDate.now();
-            List<BookingResponse> activeBookings = bookingServiceClient.getBookingsByDateRange(today, today.plusDays(1))
-                    .stream()
-                    .filter(booking -> "CONFIRMED".equals(booking.getStatus()) || "CHECKED_IN".equals(booking.getStatus()))
-                    .collect(Collectors.toList());
-            
-            int totalBookings = activeBookings.size();
-            
-            // Calculate current guests (simplified)
-            currentGuests = activeBookings.stream()
-                    .mapToInt(BookingResponse::getNumberOfGuests)
-                    .sum();
-            
-            // Calculate total revenue (this would need to fetch payments in a real implementation)
-            BigDecimal totalRevenue = BigDecimal.ZERO;
-            
+
+            try {
+                hotels = hotelServiceClient.getAllHotels();
+                totalHotels = hotels.size();
+
+                System.out.println("Hotels: " + hotels);
+                System.out.println("Total hotels: " + totalHotels);
+
+                // Tính tổng số phòng
+                for (HotelResponse hotel : hotels) {
+                    try {
+                        int roomCount = hotelServiceClient.getRoomCountByHotelId(hotel.getId());
+                        totalRooms += roomCount;
+                        log.debug("Hotel {} has {} rooms", hotel.getId(), roomCount);
+                    } catch (Exception e) {
+                        log.error("Error fetching rooms for hotel {}: {}", hotel.getId(), e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error fetching hotels: {}", e.getMessage());
+            }
+
+            System.out.println("Total rooms: " + totalRooms);
+
+//            BigDecimal totalRevenue = BigDecimal.ZERO;
+//            List<PaymentResponse> allPayments = paymentServiceClient.getPaymentsByDateRange(
+//                    today.minusMonths(6), // Last 6 months
+//                    today
+//            );
+//
+//            if (!allPayments.isEmpty()) {
+//                totalRevenue = allPayments.stream()
+//                        .map(PaymentResponse::getAmount)
+//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+//            }
+
             return OverviewStatisticsResponse.builder()
                     .totalHotels(totalHotels)
                     .totalRooms(totalRooms)
-                    .totalBookings(totalBookings)
-                    .totalRevenue(totalRevenue)
-                    .currentGuests(currentGuests)
-                    .availableRooms(availableRooms)
+                    .totalBookings(0)
+                    .totalRevenue(BigDecimal.ZERO)
+                    .currentGuests(0)
+                    .availableRooms(0)
                     .build();
-                    
+
         } catch (Exception e) {
             log.error("Error fetching overview statistics", e);
             throw new RuntimeException("Failed to fetch overview statistics: " + e.getMessage(), e);
@@ -88,7 +102,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                     request.getFrom() != null ? request.getFrom() : LocalDate.now().minusMonths(1),
                     request.getTo() != null ? request.getTo() : LocalDate.now()
             );
-            
+
             // Filter by hotel if specified
             if (request.getHotelId() != null && !request.getHotelId().isEmpty()) {
                 // Get all booking IDs for the hotel
@@ -97,17 +111,17 @@ public class StatisticsServiceImpl implements StatisticsService {
                         request.getFrom() != null ? request.getFrom() : LocalDate.now().minusMonths(1),
                         request.getTo() != null ? request.getTo() : LocalDate.now()
                 );
-                
+
                 Set<String> hotelBookingIds = hotelBookings.stream()
                         .map(BookingResponse::getId)
                         .collect(Collectors.toSet());
-                
+
                 // Filter payments for this hotel's bookings
                 payments = payments.stream()
                         .filter(payment -> hotelBookingIds.contains(payment.getBookingId()))
                         .collect(Collectors.toList());
             }
-            
+
             // Group by period
             Map<LocalDate, BigDecimal> revenueByDate = payments.stream()
                     .collect(Collectors.groupingBy(
@@ -118,7 +132,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                                     BigDecimal::add
                             )
                     ));
-            
+
             // Convert to response objects
             return revenueByDate.entrySet().stream()
                     .map(entry -> RevenueStatisticsResponse.builder()
@@ -126,18 +140,18 @@ public class StatisticsServiceImpl implements StatisticsService {
                             .period(request.getGroupBy())
                             .revenue(entry.getValue())
                             .hotelId(request.getHotelId())
-                            .hotelName(request.getHotelId() != null ? 
+                            .hotelName(request.getHotelId() != null ?
                                     hotelServiceClient.getHotelById(request.getHotelId()).getName() : "All Hotels")
                             .build())
                     .sorted(Comparator.comparing(RevenueStatisticsResponse::getDate))
                     .collect(Collectors.toList());
-                    
+
         } catch (Exception e) {
             log.error("Error fetching revenue statistics", e);
             throw new RuntimeException("Failed to fetch revenue statistics: " + e.getMessage(), e);
         }
     }
-    
+
     private LocalDate groupByDate(LocalDate date, String period) {
         if (period == null || "day".equalsIgnoreCase(period)) {
             return date;
@@ -155,12 +169,12 @@ public class StatisticsServiceImpl implements StatisticsService {
             // Default date range if not provided
             LocalDate from = request.getFrom() != null ? request.getFrom() : LocalDate.now().minusMonths(1);
             LocalDate to = request.getTo() != null ? request.getTo() : LocalDate.now();
-            
+
             // Get all bookings for the date range
             List<BookingResponse> bookings = request.getHotelId() != null && !request.getHotelId().isEmpty()
                     ? bookingServiceClient.getBookingsByHotelAndDateRange(request.getHotelId(), from, to)
                     : bookingServiceClient.getBookingsByDateRange(from, to);
-            
+
             // Group bookings by date and count occupied rooms
             Map<LocalDate, Long> occupiedRoomsByDate = bookings.stream()
                     .filter(booking -> "CONFIRMED".equals(booking.getStatus()) || "CHECKED_IN".equals(booking.getStatus()))
@@ -168,23 +182,23 @@ public class StatisticsServiceImpl implements StatisticsService {
                             booking -> groupByDate(booking.getCheckInDate(), request.getGroupBy()),
                             Collectors.counting()
                     ));
-            
+
             // Get total rooms (simplified - in a real app, fetch from room service)
             int totalRooms = 100; // This should be fetched from the room service
-            
+
             // Convert to response objects
             return occupiedRoomsByDate.entrySet().stream()
                     .map(entry -> {
                         LocalDate date = entry.getKey();
                         long occupiedRooms = entry.getValue();
                         double occupancyRate = totalRooms > 0 ? (double) occupiedRooms / totalRooms : 0.0;
-                        
+
                         return OccupancyStatisticsResponse.builder()
                                 .date(date)
                                 .period(request.getGroupBy())
                                 .occupancyRate(occupancyRate)
                                 .hotelId(request.getHotelId())
-                                .hotelName(request.getHotelId() != null ? 
+                                .hotelName(request.getHotelId() != null ?
                                         hotelServiceClient.getHotelById(request.getHotelId()).getName() : "All Hotels")
                                 .totalRooms(totalRooms)
                                 .occupiedRooms((int) occupiedRooms)
@@ -192,7 +206,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                     })
                     .sorted(Comparator.comparing(OccupancyStatisticsResponse::getDate))
                     .collect(Collectors.toList());
-                    
+
         } catch (Exception e) {
             log.error("Error fetching occupancy statistics", e);
             throw new RuntimeException("Failed to fetch occupancy statistics: " + e.getMessage(), e);
@@ -205,12 +219,12 @@ public class StatisticsServiceImpl implements StatisticsService {
             // Default date range if not provided
             LocalDate from = request.getFrom() != null ? request.getFrom() : LocalDate.now().minusMonths(1);
             LocalDate to = request.getTo() != null ? request.getTo() : LocalDate.now();
-            
+
             // Get all bookings for the date range
             List<BookingResponse> bookings = request.getHotelId() != null && !request.getHotelId().isEmpty()
                     ? bookingServiceClient.getBookingsByHotelAndDateRange(request.getHotelId(), from, to)
                     : bookingServiceClient.getBookingsByDateRange(from, to);
-            
+
             // Group bookings by date and status
             Map<LocalDate, Map<String, Long>> bookingsByDateAndStatus = bookings.stream()
                     .collect(Collectors.groupingBy(
@@ -220,28 +234,28 @@ public class StatisticsServiceImpl implements StatisticsService {
                                     Collectors.counting()
                             )
                     ));
-            
+
             // Convert to response objects
             return bookingsByDateAndStatus.entrySet().stream()
                     .map(entry -> {
                         LocalDate date = entry.getKey();
                         Map<String, Long> statusCounts = entry.getValue();
-                        
+
                         return BookingStatisticsResponse.builder()
                                 .date(date)
                                 .period(request.getGroupBy())
-                                .newBookings(statusCounts.getOrDefault("PENDING", 0L) + 
+                                .newBookings(statusCounts.getOrDefault("PENDING", 0L) +
                                            statusCounts.getOrDefault("CONFIRMED", 0L))
                                 .cancelledBookings(statusCounts.getOrDefault("CANCELLED", 0L))
                                 .completedBookings(statusCounts.getOrDefault("COMPLETED", 0L))
                                 .hotelId(request.getHotelId())
-                                .hotelName(request.getHotelId() != null ? 
+                                .hotelName(request.getHotelId() != null ?
                                         hotelServiceClient.getHotelById(request.getHotelId()).getName() : "All Hotels")
                                 .build();
                     })
                     .sorted(Comparator.comparing(BookingStatisticsResponse::getDate))
                     .collect(Collectors.toList());
-                    
+
         } catch (Exception e) {
             log.error("Error fetching booking statistics", e);
             throw new RuntimeException("Failed to fetch booking statistics: " + e.getMessage(), e);
@@ -254,16 +268,16 @@ public class StatisticsServiceImpl implements StatisticsService {
             // Default date range if not provided
             LocalDate from = request.getFrom() != null ? request.getFrom() : LocalDate.now().minusMonths(1);
             LocalDate to = request.getTo() != null ? request.getTo() : LocalDate.now();
-            
+
             // Get all bookings for the date range
             List<BookingResponse> bookings = request.getHotelId() != null && !request.getHotelId().isEmpty()
                     ? bookingServiceClient.getBookingsByHotelAndDateRange(request.getHotelId(), from, to)
                     : bookingServiceClient.getBookingsByDateRange(from, to);
-            
+
             // Get unique customers (simplified - in a real app, fetch from user service)
             Map<String, BookingResponse> uniqueCustomers = new HashMap<>();
             Map<String, Long> customerVisitCount = new HashMap<>();
-            
+
             for (BookingResponse booking : bookings) {
                 String customerEmail = booking.getGuestEmail();
                 if (customerEmail != null && !customerEmail.isEmpty()) {
@@ -271,7 +285,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                     customerVisitCount.put(customerEmail, customerVisitCount.getOrDefault(customerEmail, 0L) + 1);
                 }
             }
-            
+
             // Count new vs returning customers (simplified logic)
             long newCustomers = uniqueCustomers.entrySet().stream()
                     .filter(entry -> {
@@ -280,25 +294,25 @@ public class StatisticsServiceImpl implements StatisticsService {
                         return customerVisitCount.getOrDefault(entry.getKey(), 0L) == 1;
                     })
                     .count();
-            
+
             long returningCustomers = uniqueCustomers.size() - newCustomers;
-            
+
             // Group by nationality and gender (simplified - in a real app, fetch from user profiles)
             Map<String, Long> byNationality = uniqueCustomers.values().stream()
                     .collect(Collectors.groupingBy(
                             booking -> "Unknown", // In a real app, get from user profile
                             Collectors.counting()
                     ));
-            
+
             Map<String, Long> byGender = uniqueCustomers.values().stream()
                     .collect(Collectors.groupingBy(
                             booking -> "UNKNOWN", // In a real app, get from user profile
                             Collectors.counting()
                     ));
-            
+
             // Group by age (simplified - in a real app, calculate from date of birth)
             Map<String, Long> byAgeGroup = Map.of("18-30", (long) uniqueCustomers.size());
-            
+
             // Create response
             return List.of(CustomerStatisticsResponse.builder()
                     .date(groupByDate(from, request.getGroupBy()))
@@ -309,10 +323,10 @@ public class StatisticsServiceImpl implements StatisticsService {
                     .customersByAgeGroup(byAgeGroup)
                     .customersByGender(byGender)
                     .hotelId(request.getHotelId())
-                    .hotelName(request.getHotelId() != null ? 
+                    .hotelName(request.getHotelId() != null ?
                             hotelServiceClient.getHotelById(request.getHotelId()).getName() : "All Hotels")
                     .build());
-                    
+
         } catch (Exception e) {
             log.error("Error fetching customer statistics", e);
             throw new RuntimeException("Failed to fetch customer statistics: " + e.getMessage(), e);
@@ -327,32 +341,32 @@ public class StatisticsServiceImpl implements StatisticsService {
             if (hotel == null) {
                 throw new IllegalArgumentException("Hotel not found with id: " + hotelId);
             }
-            
+
             LocalDate today = LocalDate.now();
-            
+
             // Get today's bookings for this hotel
             List<BookingResponse> todaysBookings = bookingServiceClient.getBookingsByHotelAndDateRange(
-                    hotelId, 
-                    today, 
+                    hotelId,
+                    today,
                     today.plusDays(1)
             );
-            
+
             // Calculate current guests (simplified)
             int currentGuests = todaysBookings.stream()
                     .filter(booking -> "CHECKED_IN".equals(booking.getStatus()))
                     .mapToInt(BookingResponse::getNumberOfGuests)
                     .sum();
-            
+
             // Get all time bookings for this hotel (for total bookings and revenue)
             List<BookingResponse> allTimeBookings = bookingServiceClient.getBookingsByHotelAndDateRange(
-                    hotelId, 
+                    hotelId,
                     today.minusYears(1), // Last year
                     today.plusDays(1)
             );
-            
+
             // Calculate total bookings
             int totalBookings = allTimeBookings.size();
-            
+
             // Calculate total revenue (simplified - in a real app, fetch from payment service)
             BigDecimal totalRevenue = allTimeBookings.stream()
                     .map(booking -> {
@@ -365,17 +379,17 @@ public class StatisticsServiceImpl implements StatisticsService {
                         }
                     })
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+
             // Get total rooms (simplified - in a real app, fetch from room service)
             int totalRooms = 50; // Default value
-            
+
             // Calculate available rooms (simplified)
             int occupiedRooms = (int) todaysBookings.stream()
                     .filter(booking -> "CHECKED_IN".equals(booking.getStatus()) || "CONFIRMED".equals(booking.getStatus()))
                     .count();
-            
+
             int availableRooms = Math.max(0, totalRooms - occupiedRooms);
-            
+
             return OverviewStatisticsResponse.builder()
                     .totalHotels(1) // Just this hotel
                     .totalRooms(totalRooms)
@@ -384,7 +398,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                     .currentGuests(currentGuests)
                     .availableRooms(availableRooms)
                     .build();
-                    
+
         } catch (Exception e) {
             log.error("Error fetching hotel overview statistics for hotel: " + hotelId, e);
             throw new RuntimeException("Failed to fetch hotel overview statistics: " + e.getMessage(), e);
