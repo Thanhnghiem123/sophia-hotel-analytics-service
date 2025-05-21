@@ -11,7 +11,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import vn.edu.iuh.sophiahotelanalyticsservice.clients.dto.HotelResponse;
+import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.OccupancyStatisticsResponse;
+import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.HotelStatisticsResponse;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 
@@ -130,6 +134,64 @@ public class HotelServiceClient {
         } catch (Exception e) {
             log.error("Error fetching available room count: {}", e.getMessage());
             return 0; // Return 0 as default if there's an error
+        }
+    }
+
+    public OccupancyStatisticsResponse getOccupancyStatistics(LocalDate from, LocalDate to, String hotelId) {
+        String url = hotelServiceUrl + "/api/v1/hotels/statistics/occupancy?from=" + from.format(DateTimeFormatter.ISO_DATE) +
+                     "&to=" + to.format(DateTimeFormatter.ISO_DATE);
+        
+        if (hotelId != null && !hotelId.isEmpty()) {
+            url += "&hotelId=" + hotelId;
+        }
+        
+        log.info("Fetching occupancy statistics from URL: {}", url);
+        
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    String.class
+            );
+            
+            log.debug("Raw response from hotel service: {}", response.getBody());
+            
+            if (response.getBody() == null) {
+                log.warn("Received null response body for occupancy statistics");
+                return null;
+            }
+            
+            return objectMapper.readValue(response.getBody(), OccupancyStatisticsResponse.class);
+        } catch (Exception e) {
+            log.error("Error fetching occupancy statistics: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    public HotelStatisticsResponse getHotelStatisticsOverview(String hotelId) {
+        String url = hotelServiceUrl + "/api/v1/hotels/statistics/hotel/" + hotelId + "/overview";
+        log.info("Fetching hotel statistics overview from URL: {}", url);
+        
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    String.class
+            );
+            
+            log.debug("Raw response from hotel service: {}", response.getBody());
+            
+            if (response.getBody() == null) {
+                log.warn("Received null response body for hotel statistics");
+                return null;
+            }
+            
+            return objectMapper.readValue(response.getBody(), HotelStatisticsResponse.class);
+        } catch (Exception e) {
+            log.error("Error fetching hotel statistics overview: {}", e.getMessage());
+            return null;
         }
     }
 

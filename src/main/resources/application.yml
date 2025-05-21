@@ -61,8 +61,14 @@ jwt:
   expiration: 86400000 # 24 hours in milliseconds
 
 # Service URLs
+#service:
+#  hotel: http://localhost:8082
+#  booking: http://localhost:8083
+#  payment: http://localhost:8084
+#  user: http://localhost:8081
+
 service:
-  hotel: http://localhost:8082
-  booking: http://localhost:8083
-  payment: http://localhost:8084
-  user: http://localhost:8081
+  hotel: http://hotel-service:8082
+  booking: http://booking-service:8083
+  payment: http://payment-service:8084
+  user: http://auth-service:8081

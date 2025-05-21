@@ -6,19 +6,25 @@ import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.CustomerStatisticsR
 import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.OccupancyStatisticsResponse;
 import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.OverviewStatisticsResponse;
 import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.RevenueStatisticsResponse;
+import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.HotelStatisticsResponse;
+import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.UserStatisticsResponse;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface StatisticsService {
     OverviewStatisticsResponse getOverviewStatistics();
+
     
-    List<RevenueStatisticsResponse> getRevenueStatistics(DateRangeRequest request);
+    // New methods for direct API calls to services
+    Map<String, Object> getDirectRevenueStatistics(LocalDate from, LocalDate to);
     
-    List<OccupancyStatisticsResponse> getOccupancyStatistics(DateRangeRequest request);
+    OccupancyStatisticsResponse getDirectOccupancyStatistics(LocalDate from, LocalDate to, String hotelId);
     
-    List<BookingStatisticsResponse> getBookingStatistics(DateRangeRequest request);
+    Map<String, Object> getDirectBookingStatistics(LocalDate from, LocalDate to);
     
-    List<CustomerStatisticsResponse> getCustomerStatistics(DateRangeRequest request);
+    UserStatisticsResponse getDirectCustomerStatistics(LocalDate from, LocalDate to);
     
-    OverviewStatisticsResponse getHotelOverviewStatistics(String hotelId);
+    HotelStatisticsResponse getDirectHotelStatistics(String hotelId);
 }

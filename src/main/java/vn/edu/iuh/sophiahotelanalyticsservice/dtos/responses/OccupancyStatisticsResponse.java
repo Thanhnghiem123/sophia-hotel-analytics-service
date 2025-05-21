@@ -13,8 +13,6 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OccupancyStatisticsResponse {
-    private LocalDate date;
-    private String period; // 'day', 'month', or 'year'
     private double occupancyRate; // 0.0 to 1.0
     private String hotelId; // null for aggregate across all hotels
     private String hotelName;
