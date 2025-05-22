@@ -195,4 +195,27 @@ public class HotelServiceClient {
         }
     }
 
+
+    public int countActiveHotels() {
+        String url = hotelServiceUrl + "/api/v1/hotels/count/active";
+        log.info("Fetching active hotels count from URL: {}", url);
+
+        try {
+            ResponseEntity<Integer> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    Integer.class
+            );
+
+            int count = response.getBody() != null ? response.getBody() : 0;
+            log.debug("Active hotels count: {}", count);
+
+            return count;
+        } catch (Exception e) {
+            log.error("Error fetching active hotels count: {}", e.getMessage());
+            return 0; // Return 0 as default if there's an error
+        }
+    }
+
 }

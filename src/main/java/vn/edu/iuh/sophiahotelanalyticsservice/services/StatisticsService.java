@@ -27,4 +27,6 @@ public interface StatisticsService {
     UserStatisticsResponse getDirectCustomerStatistics(LocalDate from, LocalDate to);
     
     HotelStatisticsResponse getDirectHotelStatistics(String hotelId);
+
+    int countActiveHotels();
 }

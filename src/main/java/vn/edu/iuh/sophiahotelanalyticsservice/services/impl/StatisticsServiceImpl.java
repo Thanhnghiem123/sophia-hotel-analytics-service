@@ -16,6 +16,7 @@ import vn.edu.iuh.sophiahotelanalyticsservice.dtos.responses.*;
 import vn.edu.iuh.sophiahotelanalyticsservice.services.StatisticsService;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -44,7 +45,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
             try {
                 hotels = hotelServiceClient.getAllHotels();
-                totalHotels = hotels.size();
+                totalHotels = countActiveHotels();
 
                 System.out.println("Hotels: " + hotels);
                 System.out.println("Total hotels: " + totalHotels);
@@ -87,6 +88,9 @@ public class StatisticsServiceImpl implements StatisticsService {
                             .map(PaymentResponse::getAmount)
                             .filter(Objects::nonNull)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    // Fix: assign the result of setScale back to totalRevenue
+                    totalRevenue = totalRevenue.setScale(0, RoundingMode.HALF_UP);
                 }
             } catch (Exception e) {
                 log.error("Error calculating total revenue: {}", e.getMessage());
@@ -166,6 +170,17 @@ public class StatisticsServiceImpl implements StatisticsService {
         } catch (Exception e) {
             log.error("Error fetching direct hotel statistics", e);
             throw new RuntimeException("Failed to fetch hotel statistics: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public int countActiveHotels() {
+        log.info("Fetching active hotels count");
+        try {
+            return (int) hotelServiceClient.countActiveHotels();
+        } catch (Exception e) {
+            log.error("Error fetching active hotels count", e);
+            throw new RuntimeException("Failed to fetch active hotels count: " + e.getMessage(), e);
         }
     }
 }
